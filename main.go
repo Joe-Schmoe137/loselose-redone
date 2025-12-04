@@ -56,19 +56,32 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		//		m.selected[m.xpos] = struct{}{}
 		//	}
 		}
+	// Used for window resizing
 	case tea.WindowSizeMsg:
 		xmax = msg.Width
 		ymax = msg.Height
+
+		// Check for out of bounds characters
+		// Player
+		if m.xpos >= xmax {
+			m.xpos = xmax - 1
+		}
 	}
 	return m, nil
 }
 
 func (m model) View() string {
+	var headerOffset int = 0
 	// The header
 	display := "What matters most?\n\n"
+	headerOffset += 2
 	// Debug info
 	display += fmt.Sprintf("DEBUG:\txpos = %v\tymax = %v\n", m.xpos, ymax)
-
+	headerOffset++
+	// Print "space"
+	for i:=1; i < (ymax - headerOffset); i++ {
+		display += fmt.Sprintf("\n")
+	}
 	// Display the ship
 	display += fmt.Sprintf("%*s", m.xpos + 1, "^")
 	return display
