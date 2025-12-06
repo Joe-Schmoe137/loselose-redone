@@ -3,17 +3,41 @@ package main
 import (
 	"fmt"
 	"os"
+	"math/rand"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-// globals
+///===================================
+// Globals
+//===================================/ 
 var xmax int
 var ymax int
+var enemySlice = []enemyModel{}
 
 type model struct {
 	xpos   int
 }
+
+type enemyModel struct {
+	xpos	int
+	ypos	int
+}
+
+//===================================
+// Helper Functions
+//===================================
+
+func spawnEnemy() enemyModel {
+	return enemyModel{
+		xpos: rand.Intn(xmax - 1),
+		ypos: 0,
+	}
+}
+
+//===================================
+// Bubble tea functions
+//===================================
 
 func initalModel() model {
 	return model{
@@ -48,6 +72,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.xpos++
 			}
 
+		case "e":
+			enemySlice = append(enemySlice, spawnEnemy())
 		//case "enter", " ":
 		//	_, ok := m.selected[m.xpos]
 		//	if ok {
@@ -76,10 +102,18 @@ func (m model) View() string {
 	display := "What matters most?\n\n"
 	headerOffset += 2
 	// Debug info
-	display += fmt.Sprintf("DEBUG:\txpos = %v\tymax = %v\n", m.xpos, ymax)
+	display += fmt.Sprintf("DEBUG:\txpos = %v\tymax = %v\txmax = %v\n", m.xpos, ymax, xmax)
 	headerOffset++
 	// Print "space"
 	for i:=1; i < (ymax - headerOffset); i++ {
+		// check for enemies on each line
+		for enemyIndex:=0; enemyIndex < len(enemySlice); enemyIndex++ {
+			enemy := enemySlice[enemyIndex]
+			// Later we will grab all info on line and put it into a Slice before checking this
+			if enemy.ypos == i - 1 {
+				display += fmt.Sprintf("%*s", enemy.xpos, "@")
+			}
+		}
 		display += fmt.Sprintf("\n")
 	}
 	// Display the ship
