@@ -14,12 +14,18 @@ import (
 var xmax int
 var ymax int
 var enemySlice = []enemyModel{}
+var laserSlice = []laserModel{}
 
 type model struct {
 	xpos   int
 }
 
 type enemyModel struct {
+	xpos	int
+	ypos	int
+}
+
+type laserModel struct {
 	xpos	int
 	ypos	int
 }
@@ -31,7 +37,14 @@ type enemyModel struct {
 func spawnEnemy() enemyModel {
 	return enemyModel{
 		xpos: rand.Intn(xmax - 1),
-		ypos: 0,
+		ypos: 3, // TODO: change this since it's hard coded
+	}
+}
+
+func spawnLaser(playerXpos int) laserModel {
+	return laserModel{
+		xpos: playerXpos,
+		ypos: ymax - 2,
 	}
 }
 
@@ -74,13 +87,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case "e":
 			enemySlice = append(enemySlice, spawnEnemy())
-		//case "enter", " ":
-		//	_, ok := m.selected[m.xpos]
-		//	if ok {
-		//		delete(m.selected, m.xpos)
-		//	} else {
-		//		m.selected[m.xpos] = struct{}{}
-		//	}
+		case "enter", " ":
+			laserSlice = append(laserSlice, spawnLaser(m.xpos))
 		}
 	// Used for window resizing
 	case tea.WindowSizeMsg:
@@ -97,21 +105,34 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) View() string {
-	var headerOffset int = 0
+	var headerOffset int = 1
 	// The header
 	display := "What matters most?\n\n"
 	headerOffset += 2
 	// Debug info
-	display += fmt.Sprintf("DEBUG:\txpos = %v\tymax = %v\txmax = %v\n", m.xpos, ymax, xmax)
+	if len(laserSlice) >= 1 {
+		laser := laserSlice[len(laserSlice) - 1]
+		display += fmt.Sprintf("DEBUG: laser.xpos = %v\t laser.ypos = %v\n", laser.xpos, laser.ypos)
+	} else {
+		display += fmt.Sprintf("DEBUG:\txpos = %v\tymax = %v\n", m.xpos, ymax)
+	}
 	headerOffset++
 	// Print "space"
-	for i:=1; i < (ymax - headerOffset); i++ {
+	for i:=headerOffset; i < ymax; i++ {
 		// check for enemies on each line
 		for enemyIndex:=0; enemyIndex < len(enemySlice); enemyIndex++ {
 			enemy := enemySlice[enemyIndex]
 			// Later we will grab all info on line and put it into a Slice before checking this
 			if enemy.ypos == i - 1 {
 				display += fmt.Sprintf("%*s", enemy.xpos, "@")
+			}
+		}
+		// check for lasers on each line
+		for laserIndex:=0; laserIndex < len(laserSlice); laserIndex++ {
+			laser := laserSlice[laserIndex]
+			
+			if laser.ypos == i - 1 {
+				display += fmt.Sprintf("%*s", laser.xpos + 1, "|")
 			}
 		}
 		display += fmt.Sprintf("\n")
