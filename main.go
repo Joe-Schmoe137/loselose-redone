@@ -8,16 +8,28 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-///===================================
+//===================================
 // Globals
-//===================================/ 
+//=================================== 
 var xmax int
 var ymax int
-var enemySlice = []enemyModel{}
-var laserSlice = []laserModel{}
+var enemySlice = []entityModel{}
+var laserSlice = []entityModel{}
+
+const (
+	enemyType int	= 0
+	laserType		= 1
+)
 
 type model struct {
 	xpos   int
+}
+
+type entityModel struct {
+	entityType	int
+	xpos		int
+	ypos		int
+	symbol		string
 }
 
 type enemyModel struct {
@@ -34,17 +46,21 @@ type laserModel struct {
 // Helper Functions
 //===================================
 
-func spawnEnemy() enemyModel {
-	return enemyModel{
+func spawnEnemy() entityModel{
+	return entityModel{
+		entityType: enemyType,
 		xpos: rand.Intn(xmax - 1),
 		ypos: 3, // TODO: change this since it's hard coded
+		symbol: "@",
 	}
 }
 
-func spawnLaser(playerXpos int) laserModel {
-	return laserModel{
+func spawnLaser(playerXpos int) entityModel{
+	return entityModel{
+		entityType: laserType,
 		xpos: playerXpos,
 		ypos: ymax - 2,
+		symbol: "|",
 	}
 }
 
@@ -124,7 +140,7 @@ func (m model) View() string {
 			enemy := enemySlice[enemyIndex]
 			// Later we will grab all info on line and put it into a Slice before checking this
 			if enemy.ypos == i - 1 {
-				display += fmt.Sprintf("%*s", enemy.xpos, "@")
+				display += fmt.Sprintf("%*s", enemy.xpos, enemy.symbol)
 			}
 		}
 		// check for lasers on each line
@@ -132,7 +148,7 @@ func (m model) View() string {
 			laser := laserSlice[laserIndex]
 			
 			if laser.ypos == i - 1 {
-				display += fmt.Sprintf("%*s", laser.xpos + 1, "|")
+				display += fmt.Sprintf("%*s", laser.xpos + 1, laser.symbol)
 			}
 		}
 		display += fmt.Sprintf("\n")
