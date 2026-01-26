@@ -32,11 +32,13 @@ type entityModel struct {
 	symbol		string
 }
 
+// Remove
 type enemyModel struct {
 	xpos	int
 	ypos	int
 }
 
+// Remove
 type laserModel struct {
 	xpos	int
 	ypos	int
@@ -104,7 +106,17 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "e":
 			enemySlice = append(enemySlice, spawnEnemy())
 		case "enter", " ":
-			laserSlice = append(laserSlice, spawnLaser(m.xpos))
+			spaceAvailable := true
+			for laserIndex:=0; laserIndex < len(laserSlice); laserIndex++ {
+				laserCmp := laserSlice[laserIndex]
+				if(laserCmp.ypos == ymax - 2 && laserCmp.xpos == m.xpos) {
+					spaceAvailable = false
+					break
+				}
+			}
+			if(spaceAvailable) {
+				laserSlice = append(laserSlice, spawnLaser(m.xpos))			
+			}
 		}
 	// Used for window resizing
 	case tea.WindowSizeMsg:
