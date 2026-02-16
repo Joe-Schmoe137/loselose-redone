@@ -154,7 +154,22 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 		case "e":
-			entitySlice = append(entitySlice, createEnemy())
+			var generatedEnemy entityModel = createEnemy()
+			// check for space conflicts
+			var validArea bool = false
+			for !validArea {
+				validArea = true
+				for entityIndex := range entitySlice {
+					if (generatedEnemy.xpos == entitySlice[entityIndex].xpos && generatedEnemy.ypos == entitySlice[entityIndex].ypos) {
+						validArea = false
+						break
+					}
+				}
+				if !validArea {
+					generatedEnemy = createEnemy()
+				}
+			}
+			entitySlice = append(entitySlice, generatedEnemy)
 		case "enter", " ":
 			//spaceAvailable := true
 			//for laserIndex:=0; laserIndex < len(entitySlice); laserIndex++ {
@@ -189,19 +204,21 @@ func (m model) View() string {
 	headerOffset += 2
 	var yEntities = generateEntitiesByLine(headerOffset)
 	// Debug info
-	if len(entitySlice) >= 1 {
-		laser := entitySlice[len(entitySlice) - 1]
-		display += fmt.Sprintf("DEBUG: laser.xpos = %v\t laser.ypos = %v\t len(yEntities[0]) = %v\n", laser.xpos, laser.ypos, len(yEntities[0]))
+	if (len(yEntities) > 0 && len(yEntities[0]) > 0) {
+		laser := yEntities[0][len(yEntities[0]) - 1]
+		display += fmt.Sprintf("DEBUG: entity.xpos = %v entity.ypos = %v\n", laser.xpos, laser.ypos)
 	} else {
-		display += fmt.Sprintf("DEBUG:\txpos = %v\tymax = %v\theaderOffset = %v\tlen(yEntities) = %v\n", m.xpos, ymax, headerOffset, len(yEntities))
+		display += fmt.Sprintf("DEBUG:\txpos = %v\tymax = %v\theaderOffset = %v\n", m.xpos, ymax, headerOffset)
 	}
-	headerOffset++
 	// Print "space"
 	// create line by line slice of entities
 	for ySliceIndex := range yEntities{
+		var previousXPos int = 0
 		for entityIndex := range yEntities[ySliceIndex] {
 			entity := yEntities[ySliceIndex][entityIndex]
-			display += fmt.Sprintf("%*s", entity.xpos + 1, entity.symbol)
+			//display += fmt.Sprintf("%v ", entity.symbol)
+			display += fmt.Sprintf("%*s", (entity.xpos - previousXPos), entity.symbol)
+			previousXPos = entity.xpos
 		}
 		display += fmt.Sprintf("\n")
 	}
