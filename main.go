@@ -14,6 +14,7 @@ import (
 //=================================== 
 var xmax int
 var ymax int
+var headerOffset int = 3
 var entitySlice = []entityModel{}
 var laserSlice = []entityModel{}
 
@@ -49,6 +50,7 @@ type laserModel struct {
 // Helper Functions
 //===================================
 
+// Creates an entityModel of type enemy at ypos 0 and a random valid x index
 // Returns an entityModel of type enemy
 func createEnemy() entityModel{
 	return entityModel{
@@ -59,20 +61,21 @@ func createEnemy() entityModel{
 	}
 }
 
-// Returns an entityModel of type laser above the player's position
+// Creates an entityModel of type laser above the player's position
 // playerXpos int - The current xpos of the player
+// returns: a entityModel with a laserType above the player's position
 func createLaser(playerXpos int) entityModel{
 	return entityModel{
 		entityType: laserType,
 		xpos: playerXpos,
-		ypos: ymax - 2, //above player
+		ypos: ymax - (headerOffset + 2) , //above player
 		symbol: "|",
 	}
 }
 
 // Generates a sorted 2d slice of entities by line [y pos (asending)][entity (asending xpos order)]
-// headerOffset int - Spaces to skip off the top of the terminal for other text
-func generateEntitiesByLine(headerOffset int) [][]entityModel{
+// returns: a sorted 2d slice of entityModels
+func generateEntitiesByLine() [][]entityModel{
 	// Error handling
 	if (ymax - (headerOffset + 1)) < 0 {
 		return make([][]entityModel, 0)
@@ -116,6 +119,19 @@ func generateEntitiesByLine(headerOffset int) [][]entityModel{
 	return retSlice
 }
 
+// Checks the entire entity slice to see if entering in an entity at a give position, would create a coordinate conflict
+// 
+func validAreaCheck(givenEntity entityModel) bool {
+	var validArea bool = true
+	for entityIndex := range entitySlice {
+		if (givenEntity.xpos == entitySlice[entityIndex].xpos && givenEntity.ypos == entitySlice[entityIndex].ypos) {
+			validArea = false
+			break
+		}
+	}
+	return validArea
+}
+
 //===================================
 // Bubble tea functions
 //===================================
@@ -156,32 +172,16 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "e":
 			var generatedEnemy entityModel = createEnemy()
 			// check for space conflicts
-			var validArea bool = false
-			for !validArea {
-				validArea = true
-				for entityIndex := range entitySlice {
-					if (generatedEnemy.xpos == entitySlice[entityIndex].xpos && generatedEnemy.ypos == entitySlice[entityIndex].ypos) {
-						validArea = false
-						break
-					}
-				}
-				if !validArea {
-					generatedEnemy = createEnemy()
-				}
+			for !validAreaCheck(generatedEnemy) {
+				generatedEnemy = createEnemy()
 			}
 			entitySlice = append(entitySlice, generatedEnemy)
 		case "enter", " ":
-			//spaceAvailable := true
-			//for laserIndex:=0; laserIndex < len(entitySlice); laserIndex++ {
-			//	laserCmp := entitySlice[laserIndex]
-			//	if(laserCmp.ypos == ymax - 2 && laserCmp.xpos == m.xpos) {
-			//		spaceAvailable = false
-			//		break
-			//	}
-			//}
-			//if(spaceAvailable) {
-			//	entitySlice = append(entitySlice, createLaser(m.xpos))			
-			//}
+			var generatedLaser entityModel = createLaser(m.xpos)
+			// check for space conflicts
+			if validAreaCheck(generatedLaser) {
+				entitySlice = append(entitySlice, generatedLaser)
+			}
 		}
 	// Used for window resizing
 	case tea.WindowSizeMsg:
@@ -198,11 +198,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) View() string {
-	var headerOffset int = 1
 	// The header
 	display := "What matters most?\n\n"
-	headerOffset += 2
-	var yEntities = generateEntitiesByLine(headerOffset)
+	var yEntities = generateEntitiesByLine()
 	// Debug info
 	if (len(yEntities) > 0 && len(yEntities[0]) > 0) {
 		laser := yEntities[0][len(yEntities[0]) - 1]
