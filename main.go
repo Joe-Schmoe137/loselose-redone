@@ -14,13 +14,14 @@ import (
 //=================================== 
 var xmax int
 var ymax int
-var headerOffset int = 3
+var headerOffset int = 4
 var entitySlice = []entityModel{}
 var laserSlice = []entityModel{}
 
 const (
-	enemyType int	= 0
-	laserType		= 1
+	playerType 	int = 0
+	enemyType 	int	= 1
+	laserType 	int	= 2
 )
 
 type model struct {
@@ -62,34 +63,36 @@ func createEnemy() entityModel{
 }
 
 // Creates an entityModel of type laser above the player's position
-// playerXpos int - The current xpos of the player
+// player entityModel - The current entityModel of the player
 // returns: a entityModel with a laserType above the player's position
-func createLaser(playerXpos int) entityModel{
+func createLaser(player entityModel) entityModel{
 	return entityModel{
 		entityType: laserType,
-		xpos: playerXpos,
-		ypos: ymax - (headerOffset + 2) , //above player
+		xpos: player.xpos,
+		ypos: player.ypos - 1 , //above player
 		symbol: "|",
 	}
 }
 
 // Generates a sorted 2d slice of entities by line [y pos (asending)][entity (asending xpos order)]
+// playerEntity entityModel - the player's entity that has been excluded from the entitySlice
 // returns: a sorted 2d slice of entityModels
-func generateEntitiesByLine() [][]entityModel{
+func generateEntitiesByLine(playerEntity entityModel) [][]entityModel{
 	// Error handling
-	if (ymax - (headerOffset + 1)) < 0 {
+	if (ymax - (headerOffset - 1)) < 0 {
 		return make([][]entityModel, 0)
 	}
 
 	// generate empty slice
-	retSlice := make([][]entityModel, ymax - (headerOffset + 1))
+	retSlice := make([][]entityModel, ymax - (headerOffset - 1))
 	for i := range retSlice {
 		retSlice[i] = []entityModel{}
 	}
 
 	// enter in entity to correct slice
-	for entityIndex := range entitySlice {
-		var entity = entitySlice[entityIndex]
+	var modEntitySlice []entityModel = append(entitySlice, playerEntity) 
+	for entityIndex := range modEntitySlice {
+		var entity = modEntitySlice[entityIndex]
 		// if slice is empty, it's sorted. Enter entity
 		var currentLineSlice []entityModel = retSlice[entity.ypos]
 		if len(currentLineSlice) == 0 {			
@@ -136,17 +139,20 @@ func validAreaCheck(givenEntity entityModel) bool {
 // Bubble tea functions
 //===================================
 
-func initalModel() model {
-	return model{
-		xpos:   0,
+func initalModel() entityModel {
+	return entityModel{
+		entityType:playerType,
+		xpos:0,	
+		ypos:0,
+		symbol:"^",
 	}
 }
 
-func (m model) Init() tea.Cmd {
+func (m entityModel) Init() tea.Cmd {
 	return nil
 }
 
-func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m entityModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 
 	// Is it a key press?
@@ -177,7 +183,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			entitySlice = append(entitySlice, generatedEnemy)
 		case "enter", " ":
-			var generatedLaser entityModel = createLaser(m.xpos)
+			var generatedLaser entityModel = createLaser(m)
 			// check for space conflicts
 			if validAreaCheck(generatedLaser) {
 				entitySlice = append(entitySlice, generatedLaser)
@@ -193,32 +199,36 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.xpos >= xmax {
 			m.xpos = xmax - 1
 		}
+		if (ymax - headerOffset >= 0 && m.ypos != ymax - (headerOffset)) {
+			m.ypos = ymax - (headerOffset)
+		}
 	}
 	return m, nil
 }
 
-func (m model) View() string {
+func (m entityModel) View() string {
 	// The header
 	display := "What matters most?\n\n"
-	var yEntities = generateEntitiesByLine()
+	var yEntities = generateEntitiesByLine(m)
 	// Debug info
-	if (len(yEntities) > 0 && len(yEntities[0]) > 0) {
-		laser := yEntities[0][len(yEntities[0]) - 1]
+	if (len(yEntities) > 0 && len(entitySlice) - 1 > 0) {
+		laser := entitySlice[len(entitySlice) - 1]
 		display += fmt.Sprintf("DEBUG: entity.xpos = %v entity.ypos = %v\n", laser.xpos, laser.ypos)
 	} else {
-		display += fmt.Sprintf("DEBUG:\txpos = %v\tymax = %v\theaderOffset = %v\n", m.xpos, ymax, headerOffset)
+		display += fmt.Sprintf("DEBUG:\txpos = %v\tymax = %v\theaderOffset = %v\t len(yEntities) = %v\n", m.xpos, ymax, headerOffset, len(yEntities))
 	}
 	// Print "space"
 	// create line by line slice of entities
 	for ySliceIndex := range yEntities{
-		var previousXPos int = 0
+		var previousXPos int = -1
 		for entityIndex := range yEntities[ySliceIndex] {
 			entity := yEntities[ySliceIndex][entityIndex]
-			//display += fmt.Sprintf("%v ", entity.symbol)
 			display += fmt.Sprintf("%*s", (entity.xpos - previousXPos), entity.symbol)
 			previousXPos = entity.xpos
 		}
-		display += fmt.Sprintf("\n")
+		if (ySliceIndex != len(yEntities) - 1) {
+			display += fmt.Sprintf("\n")
+		}
 	}
 	//for i:=headerOffset; i < ymax; i++ {
 	//	// check for enemies on each line
@@ -240,7 +250,7 @@ func (m model) View() string {
 	//	display += fmt.Sprintf("\n")
 	//}
 	// Display the ship
-	display += fmt.Sprintf("%*s", m.xpos + 1, "^")
+	//display += fmt.Sprintf("%*s", m.xpos + 1, "^")
 	return display
 }
 
