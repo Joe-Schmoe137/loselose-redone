@@ -4,7 +4,8 @@ import (
 	"fmt"
 	"os"
 	"math/rand"
-	"slices"
+	"sort"	
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -14,7 +15,8 @@ import (
 //=================================== 
 var xmax int
 var ymax int
-var headerOffset int = 4
+var debug bool = false
+var headerOffset int = 3
 var entitySlice = []entityModel{}
 var laserSlice = []entityModel{}
 
@@ -33,18 +35,6 @@ type entityModel struct {
 	xpos		int
 	ypos		int
 	symbol		string
-}
-
-// Remove
-type enemyModel struct {
-	xpos	int
-	ypos	int
-}
-
-// Remove
-type laserModel struct {
-	xpos	int
-	ypos	int
 }
 
 //===================================
@@ -92,32 +82,14 @@ func generateEntitiesByLine(playerEntity entityModel) [][]entityModel{
 	// enter in entity to correct slice
 	var modEntitySlice []entityModel = append(entitySlice, playerEntity) 
 	for entityIndex := range modEntitySlice {
-		var entity = modEntitySlice[entityIndex]
-		// if slice is empty, it's sorted. Enter entity
-		var currentLineSlice []entityModel = retSlice[entity.ypos]
-		if len(currentLineSlice) == 0 {			
-			currentLineSlice = append(retSlice[entity.ypos], entity)
-		} else {
-			// if current entities' xpos is smaller than comparison's, enter before it. If not entered, append at end.
-			var inserted bool = false
-			for comparisonIndex:=0; comparisonIndex < len(currentLineSlice) - 1; comparisonIndex++ {
-				if (entity.xpos <= currentLineSlice[comparisonIndex].xpos) {
-					currentLineSlice = slices.Insert(currentLineSlice, comparisonIndex, entity)
-					inserted = true
-					break;
-				}
-			}
-			if(!inserted) {
-				currentLineSlice = append(retSlice[entity.ypos], entity)
-			}
-		}
-		for comparisonIndex := range retSlice[entity.ypos] {
-			// reached end of Slice, new entitiy has highest x value
-			if(comparisonIndex == len(retSlice) - 1) {
-				retSlice[entity.ypos] = append(retSlice[entity.ypos], entity)
-			}
-		}
-		retSlice[entity.ypos] = currentLineSlice
+		var currentEntity = modEntitySlice[entityIndex]
+		retSlice[currentEntity.ypos] = append(retSlice[currentEntity.ypos], currentEntity) 
+	}
+	// sort each slice
+	for yIndex := range retSlice {
+		sort.Slice(retSlice[yIndex], func(p, q int) bool {
+			return retSlice[yIndex][p].xpos < retSlice[yIndex][q].xpos
+		})
 	}
 	return retSlice
 }
@@ -149,6 +121,7 @@ func initalModel() entityModel {
 }
 
 func (m entityModel) Init() tea.Cmd {
+	if(debug) {headerOffset = 4}
 	return nil
 }
 
@@ -211,46 +184,32 @@ func (m entityModel) View() string {
 	display := "What matters most?\n\n"
 	var yEntities = generateEntitiesByLine(m)
 	// Debug info
-	if (len(yEntities) > 0 && len(entitySlice) - 1 > 0) {
-		laser := entitySlice[len(entitySlice) - 1]
-		display += fmt.Sprintf("DEBUG: entity.xpos = %v entity.ypos = %v\n", laser.xpos, laser.ypos)
-	} else {
-		display += fmt.Sprintf("DEBUG:\txpos = %v\tymax = %v\theaderOffset = %v\t len(yEntities) = %v\n", m.xpos, ymax, headerOffset, len(yEntities))
+	if(debug) {
+		if (len(yEntities) > 0 && len(entitySlice) - 1 > 0) {
+			laser := entitySlice[len(entitySlice) - 1]
+			display += fmt.Sprintf("DEBUG: entity.xpos = %v entity.ypos = %v player.xpos = %v player.ypos = %v\n", laser.xpos, laser.ypos, m.xpos, m.ypos)
+		} else {
+			display += fmt.Sprintf("DEBUG:\txpos = %v\tymax = %v\theaderOffset = %v\t len(yEntities) = %v\n", m.xpos, ymax, headerOffset, len(yEntities))
+		}
 	}
 	// Print "space"
 	// create line by line slice of entities
 	for ySliceIndex := range yEntities{
-		var previousXPos int = -1
+		var previousXPos int = 0
 		for entityIndex := range yEntities[ySliceIndex] {
 			entity := yEntities[ySliceIndex][entityIndex]
-			display += fmt.Sprintf("%*s", (entity.xpos - previousXPos), entity.symbol)
-			previousXPos = entity.xpos
+			var xPosDelta int = (entity.xpos - previousXPos)
+			if (xPosDelta < 0) {
+				xPosDelta = 0
+			}
+			display += strings.Repeat(" ", xPosDelta)
+			display += fmt.Sprintf("%v", entity.symbol)
+			previousXPos = entity.xpos + 1
 		}
 		if (ySliceIndex != len(yEntities) - 1) {
 			display += fmt.Sprintf("\n")
 		}
 	}
-	//for i:=headerOffset; i < ymax; i++ {
-	//	// check for enemies on each line
-	//	for enemyIndex:=0; enemyIndex < len(entitySlice); enemyIndex++ {
-	//		enemy := entitySlice[enemyIndex]
-	//		// Later we will grab all info on line and put it into a Slice before checking this
-	//		if enemy.ypos == i - 1 {
-	//			display += fmt.Sprintf("%*s", enemy.xpos, enemy.symbol)
-	//		}
-	//	}
-	//	// check for lasers on each line
-	//	for laserIndex:=0; laserIndex < len(entitySlice); laserIndex++ {
-	//		laser := entitySlice[laserIndex]
-	//		
-	//		if laser.ypos == i - 1 {
-	//			display += fmt.Sprintf("%*s", laser.xpos + 1, laser.symbol)
-	//		}
-	//	}
-	//	display += fmt.Sprintf("\n")
-	//}
-	// Display the ship
-	//display += fmt.Sprintf("%*s", m.xpos + 1, "^")
 	return display
 }
 
