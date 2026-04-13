@@ -15,6 +15,8 @@ import (
 //=================================== 
 var xmax int
 var ymax int
+var enemyCount int = 0
+var enemyCap int
 var debug bool = false
 var headerOffset int = 3
 var entitySlice = []entityModel{}
@@ -149,11 +151,17 @@ func (m entityModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 		case "e":
+			// Check to see if enemy can be created
+			enemyCap = xmax
+			if (enemyCount + 1 >= enemyCap) {
+				break
+			}
 			var generatedEnemy entityModel = createEnemy()
 			// check for space conflicts
 			for !validAreaCheck(generatedEnemy) {
 				generatedEnemy = createEnemy()
 			}
+			enemyCount++
 			entitySlice = append(entitySlice, generatedEnemy)
 		case "enter", " ":
 			var generatedLaser entityModel = createLaser(m)
