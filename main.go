@@ -7,6 +7,8 @@ import (
 	"sort"	
 	"strings"
 	"log"
+	"time"
+	"slices"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -18,10 +20,10 @@ var xmax int
 var ymax int
 var enemyCount int = 0
 var enemyCap int
-var debug bool = false
 var headerOffset int = 3
+var tickCounter int = 0
+var debug bool = false
 var entitySlice = []entityModel{}
-var laserSlice = []entityModel{}
 
 const (
 	playerType 	int = 0
@@ -39,6 +41,8 @@ type entityModel struct {
 	ypos		int
 	symbol		string
 }
+
+type TickMsg time.Time
 
 //===================================
 // Helper Functions
@@ -98,7 +102,6 @@ func generateEntitiesByLine(playerEntity entityModel) [][]entityModel{
 }
 
 // Checks the entire entity slice to see if entering in an entity at a give position, would create a coordinate conflict
-// 
 func validAreaCheck(givenEntity entityModel) bool {
 	var validArea bool = true
 	for entityIndex := range entitySlice {
@@ -110,9 +113,40 @@ func validAreaCheck(givenEntity entityModel) bool {
 	return validArea
 }
 
+// Updates entities for each tick
+func processTick(tickCount int) {
+	// Update entities
+	var entityCeiling int = ymax - headerOffset + 1
+	for entityIndex := range entitySlice{
+		// bandaid solution to fix race issue
+		if (entityIndex >= len(entitySlice)) { continue }
+		entity := entitySlice[entityIndex]
+		if (entity.entityType == laserType) {
+			entity.ypos = entity.ypos - 1
+			
+		} else if (entity.entityType == enemyType && tickCount % 5 == 0) {
+			entity.ypos = entity.ypos + 1
+			log.Printf("enemy y pos: %v\t ymax: %v\t headeroffset: %v\t entityCeiling: %v\n", entity.ypos, ymax, headerOffset, entityCeiling)
+		}
+		// if entity has invalid ypos then remove it
+		if (entity.ypos < 0 || entity.ypos >= entityCeiling) {
+			entitySlice = slices.Delete(entitySlice, entityIndex, entityIndex + 1)
+		} else {
+			entitySlice[entityIndex] = entity
+		}
+	}
+}
+
 //===================================
 // Bubble tea functions
 //===================================
+
+func doTick() tea.Cmd { 
+	tickDuration := time.Millisecond * 100
+	return tea.Tick(tickDuration, func(t time.Time) tea.Msg{
+		return TickMsg(t)
+	})
+}
 
 func initalModel() entityModel {
 	return entityModel{
@@ -125,7 +159,7 @@ func initalModel() entityModel {
 
 func (m entityModel) Init() tea.Cmd {
 	if(debug) {headerOffset = 4}
-	return nil
+	return doTick()
 }
 
 func (m entityModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -139,6 +173,7 @@ func (m entityModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		//exit program
 		case "ctrl+c", "q":
+			log.Print("Quitting!")
 			return m, tea.Quit
 
 		case "left", "a":
@@ -163,6 +198,7 @@ func (m entityModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				generatedEnemy = createEnemy()
 			}
 			enemyCount++
+			log.Printf("new enemy x: %v\tnew enemy y: %v\n", generatedEnemy.xpos, generatedEnemy.ypos)
 			entitySlice = append(entitySlice, generatedEnemy)
 		case "enter", " ":
 			var generatedLaser entityModel = createLaser(m)
@@ -184,6 +220,11 @@ func (m entityModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if (ymax - headerOffset >= 0 && m.ypos != ymax - (headerOffset)) {
 			m.ypos = ymax - (headerOffset)
 		}
+	// Used to register Ticks
+	case TickMsg:
+		tickCounter++
+		processTick(tickCounter)	
+		return m, doTick()
 	}
 	return m, nil
 }
@@ -224,13 +265,12 @@ func (m entityModel) View() string {
 
 func main() {
 	// Error logging
-		f, err := tea.LogToFile("debug.log", "debug")
-		if err != nil {
-			fmt.Println("fatal:", err)
-			os.Exit(1)
-		}
-		defer f.Close()
-	log.Print("testing")
+	f, err := tea.LogToFile("debug.log", "debug")
+	if err != nil {
+		fmt.Println("fatal:", err)
+		os.Exit(1)
+	}
+	defer f.Close()
 	// setup
 	p := tea.NewProgram(initalModel())
 	if _, err := p.Run(); err != nil {
