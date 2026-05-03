@@ -114,7 +114,10 @@ func validAreaCheck(givenEntity entityModel) bool {
 }
 
 // Updates entities for each tick
-func processTick(tickCount int) {
+// tickCount: The current tick count provided by the TickMsg call
+// playerEntity: The entity of the player to check for collisions
+// returns: If a game ending condidion has been satisfied
+func processTick(tickCount int, playerEntity entityModel) bool {
 	// Update entities
 	var entityCeiling int = ymax - headerOffset + 1
 	totalEntities := len(entitySlice)
@@ -130,16 +133,11 @@ func processTick(tickCount int) {
 			for enemyCheckIndex := range entitySlice{
 				checkedEntity := entitySlice[enemyCheckIndex]
 				if(checkedEntity.entityType == enemyType && checkedEntity.ypos == entity.ypos && checkedEntity.xpos == entity.xpos)  {
-					log.Printf("Deleting enemy at x:%v y:%v index:%v\n", checkedEntity.xpos, checkedEntity.ypos, enemyCheckIndex)
 					entitySlice = slices.Delete(entitySlice, enemyCheckIndex, enemyCheckIndex + 1)
 					totalEntities--
-					var entityIndexAdjust int = 0
 					if (enemyCheckIndex < entityIndex) {
 						entityIndex--
 					}
-					log.Printf("entitySlice length: %v\n", len(entitySlice))
-					log.Printf("Deleting laser at x:%v y:%v index:%v\n", entity.xpos, entity.ypos, entityIndex + entityIndexAdjust)
-					log.Printf("slices.Delete(entitySlice (len of %v), %v, %v)\n", len(entitySlice), entityIndex + entityIndexAdjust, entityIndex + entityIndexAdjust + 1)
 					entitySlice = slices.Delete(entitySlice, entityIndex, entityIndex + 1)
 					totalEntities--
 					killed = true
@@ -149,6 +147,10 @@ func processTick(tickCount int) {
 			if killed { continue }
 		} else if (entity.entityType == enemyType && tickCount % 5 == 0) {
 			entity.ypos = entity.ypos + 1
+			if (entity.ypos == playerEntity.ypos && entity.xpos == playerEntity.xpos) {
+				// enemy has collided with player, end game
+				return true
+			}
 		}
 		// if entity has invalid ypos then remove it
 		if (entity.ypos < 0 || entity.ypos >= entityCeiling) {
@@ -158,6 +160,8 @@ func processTick(tickCount int) {
 			entitySlice[entityIndex] = entity
 		}
 	}
+	// All entities have been updated without a game ending condidtion
+	return false
 }
 
 //===================================
@@ -246,8 +250,11 @@ func (m entityModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// Used to register Ticks
 	case TickMsg:
 		tickCounter++
-		processTick(tickCounter)	
-		return m, doTick()
+		if (processTick(tickCounter, m)) {
+			return m, tea.Quit
+		} else {
+			return m, doTick()
+		}
 	}
 	return m, nil
 }
