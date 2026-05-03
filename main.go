@@ -117,20 +117,43 @@ func validAreaCheck(givenEntity entityModel) bool {
 func processTick(tickCount int) {
 	// Update entities
 	var entityCeiling int = ymax - headerOffset + 1
-	for entityIndex := range entitySlice{
+	totalEntities := len(entitySlice)
+	for entityIndex:=0; entityIndex < totalEntities; entityIndex++{
 		// bandaid solution to fix race issue
 		if (entityIndex >= len(entitySlice)) { continue }
 		entity := entitySlice[entityIndex]
+		// Check collisions
 		if (entity.entityType == laserType) {
 			entity.ypos = entity.ypos - 1
-			
+			killed := false
+			// Check to see if laser has colided with an enemy
+			for enemyCheckIndex := range entitySlice{
+				checkedEntity := entitySlice[enemyCheckIndex]
+				if(checkedEntity.entityType == enemyType && checkedEntity.ypos == entity.ypos && checkedEntity.xpos == entity.xpos)  {
+					log.Printf("Deleting enemy at x:%v y:%v index:%v\n", checkedEntity.xpos, checkedEntity.ypos, enemyCheckIndex)
+					entitySlice = slices.Delete(entitySlice, enemyCheckIndex, enemyCheckIndex + 1)
+					totalEntities--
+					var entityIndexAdjust int = 0
+					if (enemyCheckIndex < entityIndex) {
+						entityIndex--
+					}
+					log.Printf("entitySlice length: %v\n", len(entitySlice))
+					log.Printf("Deleting laser at x:%v y:%v index:%v\n", entity.xpos, entity.ypos, entityIndex + entityIndexAdjust)
+					log.Printf("slices.Delete(entitySlice (len of %v), %v, %v)\n", len(entitySlice), entityIndex + entityIndexAdjust, entityIndex + entityIndexAdjust + 1)
+					entitySlice = slices.Delete(entitySlice, entityIndex, entityIndex + 1)
+					totalEntities--
+					killed = true
+					break;
+				}
+			}	
+			if killed { continue }
 		} else if (entity.entityType == enemyType && tickCount % 5 == 0) {
 			entity.ypos = entity.ypos + 1
-			log.Printf("enemy y pos: %v\t ymax: %v\t headeroffset: %v\t entityCeiling: %v\n", entity.ypos, ymax, headerOffset, entityCeiling)
 		}
 		// if entity has invalid ypos then remove it
 		if (entity.ypos < 0 || entity.ypos >= entityCeiling) {
 			entitySlice = slices.Delete(entitySlice, entityIndex, entityIndex + 1)
+			totalEntities--
 		} else {
 			entitySlice[entityIndex] = entity
 		}
