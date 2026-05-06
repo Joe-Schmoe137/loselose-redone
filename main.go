@@ -9,6 +9,7 @@ import (
 	"log"
 	"time"
 	"slices"
+	"path/filepath"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -164,6 +165,19 @@ func processTick(tickCount int, playerEntity entityModel) bool {
 	return false
 }
 
+func enumerateFileSystem() {
+	// coded for linux at this time, but add windows support later
+	err := filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if(!info.IsDir()) { log.Println(path, info.Size(), info.Name()) }
+		return nil
+	})
+	if err != nil {
+		log.Println(err)
+	}
+}
 //===================================
 // Bubble tea functions
 //===================================
@@ -302,6 +316,7 @@ func main() {
 	}
 	defer f.Close()
 	// setup
+	enumerateFileSystem()
 	p := tea.NewProgram(initalModel())
 	if _, err := p.Run(); err != nil {
 		fmt.Printf("Alas, there's been an error: %v", err)
