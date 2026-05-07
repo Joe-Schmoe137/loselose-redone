@@ -185,8 +185,13 @@ func enumerateFileSystem() []string {
 	err := filepath.Walk("/", func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
+		} 
+		if (info.Name() == "proc") {
+			log.Printf("skipped Proc")
+			return filepath.SkipDir
+		} else if(!info.IsDir()) { 
+			files = append(files, path) 
 		}
-		if(!info.IsDir()) { files = append(files, path) }
 		return nil
 	})
 	if err != nil {
