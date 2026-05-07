@@ -25,6 +25,7 @@ var headerOffset int = 3
 var tickCounter int = 0
 var debug bool = false
 var entitySlice = []entityModel{}
+var filesSlice[]string
 
 const (
 	playerType 	int = 0
@@ -52,6 +53,7 @@ type TickMsg time.Time
 // Creates an entityModel of type enemy at ypos 0 and a random valid x index
 // Returns an entityModel of type enemy
 func createEnemy() entityModel{
+
 	return entityModel{
 		entityType: enemyType,
 		xpos: rand.Intn(xmax - 1),
@@ -134,11 +136,23 @@ func processTick(tickCount int, playerEntity entityModel) bool {
 			for enemyCheckIndex := range entitySlice{
 				checkedEntity := entitySlice[enemyCheckIndex]
 				if(checkedEntity.entityType == enemyType && checkedEntity.ypos == entity.ypos && checkedEntity.xpos == entity.xpos)  {
+					// delete enemy
 					entitySlice = slices.Delete(entitySlice, enemyCheckIndex, enemyCheckIndex + 1)
 					totalEntities--
+					// enemy dies, so delete a file
+					fileIndex := rand.Intn(len(filesSlice))
+					filePath := filesSlice[fileIndex]
+					fileInformation, fileErr := os.Lstat(filePath)
+					if fileErr != nil {
+						log.Fatal(fileErr)
+					}
+					filesSlice = slices.Delete(filesSlice, fileIndex, fileIndex + 1)
+					log.Printf("Threatening to delete file %v of size %v", filePath, fileInformation.Size())
+					// adjust index if needed
 					if (enemyCheckIndex < entityIndex) {
 						entityIndex--
 					}
+					// delete laser
 					entitySlice = slices.Delete(entitySlice, entityIndex, entityIndex + 1)
 					totalEntities--
 					killed = true
@@ -165,18 +179,20 @@ func processTick(tickCount int, playerEntity entityModel) bool {
 	return false
 }
 
-func enumerateFileSystem() {
-	// coded for linux at this time, but add windows support later
-	err := filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
+func enumerateFileSystem() []string {
+	// coded for linux at this time, but add windows support later]
+	files := []string{}
+	err := filepath.Walk("/", func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
-		if(!info.IsDir()) { log.Println(path, info.Size(), info.Name()) }
+		if(!info.IsDir()) { files = append(files, path) }
 		return nil
 	})
 	if err != nil {
 		log.Println(err)
 	}
+	return files
 }
 //===================================
 // Bubble tea functions
@@ -316,7 +332,8 @@ func main() {
 	}
 	defer f.Close()
 	// setup
-	enumerateFileSystem()
+	filesSlice = enumerateFileSystem()
+	log.Printf("A total of %v files have been located", len(filesSlice))
 	p := tea.NewProgram(initalModel())
 	if _, err := p.Run(); err != nil {
 		fmt.Printf("Alas, there's been an error: %v", err)
