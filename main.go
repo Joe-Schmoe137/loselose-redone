@@ -19,8 +19,8 @@ import (
 //=================================== 
 var xmax int
 var ymax int
-var enemyCount int = 0
-var enemyCap int
+//var enemyCount int = 0
+//var enemyCap int
 var headerOffset int = 3
 var tickCounter int = 0
 var debug bool = false
@@ -121,6 +121,17 @@ func validAreaCheck(givenEntity entityModel) bool {
 // playerEntity: The entity of the player to check for collisions
 // returns: If a game ending condidion has been satisfied
 func processTick(tickCount int, playerEntity entityModel) bool {
+	// Check if another enemy needs to be added
+	if (tickCount % 20 == 0) {
+		var generatedEnemy entityModel = createEnemy()
+		// check for space conflicts
+		for !validAreaCheck(generatedEnemy) {
+			generatedEnemy = createEnemy()
+		}
+		log.Printf("new enemy x: %v\tnew enemy y: %v\n", generatedEnemy.xpos, generatedEnemy.ypos)
+		entitySlice = append(entitySlice, generatedEnemy)
+
+	}
 	// Update entities
 	var entityCeiling int = ymax - headerOffset + 1
 	totalEntities := len(entitySlice)
@@ -148,6 +159,8 @@ func processTick(tickCount int, playerEntity entityModel) bool {
 					}
 					filesSlice = slices.Delete(filesSlice, fileIndex, fileIndex + 1)
 					log.Printf("Threatening to delete file %v of size %v", filePath, fileInformation.Size())
+					// REMOVE COMMENT BELOW TO ACTIVATE
+					// os.Remove(filePath)
 					// adjust index if needed
 					if (enemyCheckIndex < entityIndex) {
 						entityIndex--
@@ -248,20 +261,20 @@ func (m entityModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.xpos++
 			}
 
-		case "e":
-			// Check to see if enemy can be created
-			enemyCap = xmax
-			if (enemyCount + 1 >= enemyCap) {
-				break
-			}
-			var generatedEnemy entityModel = createEnemy()
-			// check for space conflicts
-			for !validAreaCheck(generatedEnemy) {
-				generatedEnemy = createEnemy()
-			}
-			enemyCount++
-			log.Printf("new enemy x: %v\tnew enemy y: %v\n", generatedEnemy.xpos, generatedEnemy.ypos)
-			entitySlice = append(entitySlice, generatedEnemy)
+		//case "e":
+		//	// Check to see if enemy can be created
+		//	enemyCap = xmax
+		//	if (enemyCount + 1 >= enemyCap) {
+		//		break
+		//	}
+		//	var generatedEnemy entityModel = createEnemy()
+		//	// check for space conflicts
+		//	for !validAreaCheck(generatedEnemy) {
+		//		generatedEnemy = createEnemy()
+		//	}
+		//	enemyCount++
+		//	log.Printf("new enemy x: %v\tnew enemy y: %v\n", generatedEnemy.xpos, generatedEnemy.ypos)
+		//	entitySlice = append(entitySlice, generatedEnemy)
 		case "enter", " ":
 			var generatedLaser entityModel = createLaser(m)
 			// check for space conflicts
