@@ -23,7 +23,9 @@ var ymax int
 //var enemyCap int
 var headerOffset int = 3
 var tickCounter int = 0
+var totalBytesDeleted int64 = 0
 var debug bool = false
+var mostRecentDeletedFile = "None ... yet"
 var entitySlice = []entityModel{}
 var filesSlice[]string
 
@@ -128,7 +130,6 @@ func processTick(tickCount int, playerEntity entityModel) bool {
 		for !validAreaCheck(generatedEnemy) {
 			generatedEnemy = createEnemy()
 		}
-		log.Printf("new enemy x: %v\tnew enemy y: %v\n", generatedEnemy.xpos, generatedEnemy.ypos)
 		entitySlice = append(entitySlice, generatedEnemy)
 
 	}
@@ -158,9 +159,15 @@ func processTick(tickCount int, playerEntity entityModel) bool {
 						log.Fatal(fileErr)
 					}
 					filesSlice = slices.Delete(filesSlice, fileIndex, fileIndex + 1)
-					log.Printf("Threatening to delete file %v of size %v", filePath, fileInformation.Size())
+					totalBytesDeleted += fileInformation.Size()
+					if(len(filePath) <= xmax / 2) {
+						mostRecentDeletedFile = filePath
+					} else {
+						mostRecentDeletedFile = fileInformation.Name()
+					}
 					// REMOVE COMMENT BELOW TO ACTIVATE
 					// os.Remove(filePath)
+
 					// adjust index if needed
 					if (enemyCheckIndex < entityIndex) {
 						entityIndex--
@@ -200,7 +207,6 @@ func enumerateFileSystem() []string {
 			return err
 		} 
 		if (info.Name() == "proc") {
-			log.Printf("skipped Proc")
 			return filepath.SkipDir
 		} else if(!info.IsDir()) { 
 			files = append(files, path) 
@@ -260,21 +266,6 @@ func (m entityModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.xpos < xmax - 1 {
 				m.xpos++
 			}
-
-		//case "e":
-		//	// Check to see if enemy can be created
-		//	enemyCap = xmax
-		//	if (enemyCount + 1 >= enemyCap) {
-		//		break
-		//	}
-		//	var generatedEnemy entityModel = createEnemy()
-		//	// check for space conflicts
-		//	for !validAreaCheck(generatedEnemy) {
-		//		generatedEnemy = createEnemy()
-		//	}
-		//	enemyCount++
-		//	log.Printf("new enemy x: %v\tnew enemy y: %v\n", generatedEnemy.xpos, generatedEnemy.ypos)
-		//	entitySlice = append(entitySlice, generatedEnemy)
 		case "enter", " ":
 			var generatedLaser entityModel = createLaser(m)
 			// check for space conflicts
@@ -309,7 +300,16 @@ func (m entityModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m entityModel) View() string {
 	// The header
-	display := "What matters most?\n\n"
+	header := ""
+	header += fmt.Sprintf("Score / %v", totalBytesDeleted)
+	fileDeleteString := fmt.Sprintf("File %v Deleted!", mostRecentDeletedFile)
+	if (xmax > len(header) + len(fileDeleteString)) {
+		header += strings.Repeat(" ", xmax - (len(header) + len(fileDeleteString)))
+		header += fileDeleteString
+	}
+	display := header
+	display += "\n\n"
+
 	var yEntities = generateEntitiesByLine(m)
 	// Debug info
 	if(debug) {
