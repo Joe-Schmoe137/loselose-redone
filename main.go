@@ -2,43 +2,111 @@ package main
 
 import (
 	"os"
-	"flag"
 	"fmt"
-
-    "github.com/muesli/mango"
-    "github.com/muesli/mango/mflag"
-    "github.com/muesli/roff"
+	"log"
+	//"os/user"
+	"os/exec"
+	"strings"
+	"flag"
+	"strconv"
 )
 
-var (
-	//help = flag.String("help", "", "If specified it will run this help page then exit.")
-	targetUser = flag.String("targetUser", "", "The user to target, if not specififed the running user will be targeted.")
-	terminalTarget = flag.String("terminalTarget", "", "The pts/tty to target, if not specified the first one found will be used.")
-)
-func testFile() {
-	os.Create("./success")
+var validShells []string = []string{
+	"/bin/bash",
+	"/usr/bin/bash",
+	"/bin/sh",
+	"/usr/bin/sh",
+	"/bin/zsh",
+	"/usr/bin/zsh",
+	"/bin/fish",
+	"/usr/bin/fish",
+}
+
+func isValidShell(shellToCheck string) bool {
+	for shellIndex := range len(validShells) {
+		if(shellToCheck == validShells[shellIndex]) {return true}
+	}
+	return false
+}
+
+func greedySplit(given string, delimiter string) []string {
+	if(len(given) == 0) {
+		return make([]string,0,0)
+	}
+	var consecutiveDelimiter = false
+	var cleanedString = string(given[0])
+	for i := 1; i < len(given); i++ {
+		var testedChar = string(given[i])
+		if(testedChar != delimiter) {
+			cleanedString += testedChar
+			consecutiveDelimiter = false
+		} else if (!consecutiveDelimiter) {
+			cleanedString += testedChar
+			consecutiveDelimiter = true
+		}
+	}
+	return strings.Split(cleanedString, delimiter)
+}
+
+func findTerminal(username string) int {
+	//potentialTerminalsCommand := fmt.Sprintf("ps aux | grep %v | grep -e 'pts/' -e 'tty'", username)
+	pidString := ""
+	commandOutputByte, err := exec.Command("ps", "aux").Output()
+	if err != nil {
+		log.Fatalf(err.Error())
+	}
+	commandOutput := string(commandOutputByte)
+	processes := strings.Split(commandOutput, "\n")
+	for processIndex := range processes {
+		processSplit := greedySplit(processes[processIndex], " ")
+		if(len(processSplit) == 0) {continue}
+		pidString = strings.TrimSpace(string(processSplit[1]))
+		var shellString string = strings.TrimSpace(string(processSplit[10]))
+		if(processSplit[0] == username && isValidShell(shellString)) {
+			break
+		}
+	}
+	pid, err := strconv.Atoi(pidString)
+	if err != nil {
+		log.Fatalf(err.Error())
+	}
+	return pid
+}
+
+func collectTerminalInformation() {
+	file, err := os.Create("./success")
+	if err != nil {
+		log.Fatalf(err.Error())
+	}
+	err = file.Close()
+	if err != nil {
+		log.Fatalf(err.Error())
+	}
+}
+
+func parseArgs() int {
+	pidStr := flag.String("pid", "", "The pid of the process to inject into.")
+	targetUser := flag.String("targetUser", "", "The user to target for injection")
+
+	flag.Parse()
+
+	pid := -1
+
+	if (*pidStr != "") {
+		pid, _ = strconv.Atoi(*pidStr)
+	} else if (*targetUser != ""){
+		pid = findTerminal(*targetUser)
+	} else {
+		fmt.Printf("One of the following is needed:\n\t--pid [PID of the target process]\n\t--targetUser [Username of the user you wish to target]\n")
+		os.Exit(0)
+	}
+
+	return pid
 }
 
 func main() {
-	flag.Parse()
-
-	manPage := mango.NewManPage(1, "loselose-redone", "A TUI based game that uses your files as collateral").
-		WithLongDescription("loselose-redone is a reimagining of the original loselose game designed Zach Gage with the goal of being multiplatform and TUI based.\n" +
-			"NOTE: This game WILL DESTORY FILES ON YOUR SYSTEM and can be classified as MALWARE. You have been warened\n" +
-			"To find out more about the orignial game you can go to the loselose site here: https://loselose.net/")
-
-	flag.VisitAll(mflag.FlagVisitor(manPage))
-	
-	// Display man page if --help is specified
-	var exitBool = false
-	flag.Visit(func(f *flag.Flag) {
-		if f.Name == "help" {
-			fmt.Println(manPage.Build(roff.NewDocument()))
-			exitBool = true
-		}
-	})
-	if (exitBool) {return}
-
-	testFile()
-	setup()
+	//collectTerminalInformation()
+	pid := parseArgs()
+	fmt.Printf("Targeting process with pid %v\n", pid)
+	//setup()
 }

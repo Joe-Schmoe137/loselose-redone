@@ -253,9 +253,10 @@ func (m entityModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 
 		//exit program
-		case "ctrl+c", "q":
-			log.Print("Quitting!")
-			return m, tea.Quit
+		// can't quit now lol
+		//case "ctrl+c", "q":
+		//	log.Print("Quitting!")
+		//	return m, tea.Quit
 
 		case "left", "a":
 			if m.xpos > 0 {
@@ -343,12 +344,12 @@ func (m entityModel) View() string {
 
 func setup() {
 	// Error logging
-	f, err := tea.LogToFile("debug.log", "debug")
-	if err != nil {
-		fmt.Println("fatal:", err)
-		os.Exit(1)
-	}
-	defer f.Close()
+	//f, err := tea.LogToFile("debug.log", "debug")
+	//if err != nil {
+	//	fmt.Println("fatal:", err)
+	//	os.Exit(1)
+	//}
+	//defer f.Close()
 	// setup
 	filesSlice = enumerateFileSystem()
 	log.Printf("A total of %v files have been located", len(filesSlice))
