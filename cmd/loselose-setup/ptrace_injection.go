@@ -66,7 +66,7 @@ func launchInjection(PID int) {
 	fmt.Printf("Running the syscall PTRACE\n")
 	err = syscall.PtraceSyscall(PID, 0)
 	checkError(err)
-	ptraceWait(process)
+	//ptraceWait(process)
 
 	// retrieve register information
 	fmt.Printf("Retrieving register information\n")
