@@ -28,6 +28,7 @@ func ptraceWait(process *os.Process) {
 	fmt.Printf("Waiting for process to stop\n")
 	for {
 		pState, err := process.Wait()
+		fmt.Printf("DEBUG: err is %v\n", err)
 		checkError(err)
 		var pStatus syscall.WaitStatus = pState.Sys().(syscall.WaitStatus)
 		if(pStatus.Stopped()) {
@@ -62,11 +63,16 @@ func launchInjection(PID int) {
 	fmt.Printf("successfully attached to %v\n", PID)
 
 	// wait for ptrace state to enact
-	ptraceWait(process)
-	fmt.Printf("Running the syscall PTRACE\n")
-	err = syscall.PtraceSyscall(PID, 0)
+    ptraceWait(process)
+    fmt.Printf("Running the syscall PTRACE\n")
+    err = syscall.PtraceSyscall(PID, 0)
+    checkError(err)
+
+	// I don't know why, but if you don't re-initialize the process the injection will fail... sometimes.
+	process, err = os.FindProcess(PID)
 	checkError(err)
-	//ptraceWait(process)
+    ptraceWait(process)
+
 
 	// retrieve register information
 	fmt.Printf("Retrieving register information\n")
