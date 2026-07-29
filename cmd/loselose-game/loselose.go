@@ -164,8 +164,7 @@ func processTick(tickCount int, playerEntity entityModel) bool {
 					} else {
 						mostRecentDeletedFile = fileInformation.Name()
 					}
-					// REMOVE COMMENT BELOW TO ACTIVATE
-					// os.Remove(filePath)
+					os.Remove(filePath)
 
 					// adjust index if needed
 					if (enemyCheckIndex < entityIndex) {
