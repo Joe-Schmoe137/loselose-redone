@@ -6,6 +6,7 @@ Additionally, one feature that I thought would be cool to add since I wanted to 
 1. Run the command: `go build ./cmd/loselose-game/`
 2. Now you can run the executable `loselose-game`.
 Do note that the files you have access to are tied to your current user, so for the true experience why not run it at root. >:)
+
 **If you desire to utilize process injection:**
 1. Run the setup script `setup.sh`, it will walk you through the process and afterwards you'll have the file `loselose-injection`
 2. Using sudo privileges run one of the following :
