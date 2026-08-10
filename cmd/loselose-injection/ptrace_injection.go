@@ -27,7 +27,6 @@ func ptraceWait(process *os.Process) {
 	fmt.Printf("Waiting for process to stop\n")
 	for {
 		pState, err := process.Wait()
-		fmt.Printf("DEBUG: err is %v\n", err)
 		checkError(err)
 		var pStatus syscall.WaitStatus = pState.Sys().(syscall.WaitStatus)
 		if(pStatus.Stopped()) {

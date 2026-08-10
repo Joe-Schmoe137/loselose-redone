@@ -8,7 +8,7 @@ Additionally, one feature that I thought would be cool to add since I wanted to 
 Do note that the files you have access to are tied to your current user, so for the true experience why not run it at root. >:)
 
 **If you desire to utilize process injection:**
-1. Run the setup script `setup.sh`, it will walk you through the process and afterwards you'll have the file `loselose-injection`
+1. Run the setup script `bash setup.sh`, it will walk you through the process and afterwards you'll have the file `loselose-injection`
 2. Using sudo privileges run one of the following :
 	1. `sudo ./loselose-injection --pid [PID of the target process]`
 	2. `sudo ./loselose-injection --targetUser [Username of the user you want to target]` This one will find the first available shell process to inject into that belongs to the target user. 
